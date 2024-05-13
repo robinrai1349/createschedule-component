@@ -1,8 +1,17 @@
+let dataFormat = ["courseID",
+                        "courseName",
+                        "deadlineName",
+                        "deadlineDate",
+                        "deadlineGrade"
+                    ]
+
 document.addEventListener("DOMContentLoaded", function() {
     const createProfileBtn = document.getElementById('createProfileBtn');
     const profileForm = document.getElementById('profileForm');
     const submitProfileBtn = document.getElementById('submitProfileBtn');
     const cancelProfileBtn = document.getElementById('cancelProfileBtn');
+
+    
 
     createProfileBtn.addEventListener('click', function() {
         profileForm.style.display = 'flex';
@@ -31,31 +40,56 @@ document.addEventListener("DOMContentLoaded", function() {
         var reader = new FileReader();
         reader.onload = function(e) {
             const text = e.target.result;
-            const data = csvToArray(text);
-            console.log(data);
+            if (correctHeaders(text)) {
+                console.log("Valid")
+                const data = csvToArray(text);
+                console.log(data);
+                sendDataToServer(semesterId, data)
+            } else {
+                console.log("Invalid")
+            }
+            
         };
 
         reader.readAsText(dataFile)
         // Simulate profile creation
-        alert("Profile created successfully!");
+
+        // Hide form after submission
         profileForm.style.display = 'none';
     });
 });
 
+function correctHeaders(str, delimiter = ",") {
+    let valid = true
+
+    const headers = str.slice(0, str.indexOf("\n")).replace(/(\r)/gm, "").split(delimiter);
+    headers.forEach(h => {
+        if (!dataFormat.includes(h)) {
+            valid = false;
+        }
+    });
+    return valid;
+}
+
 function csvToArray(str, delimiter = ",") {
     // slice from start of string to first \n index
     // split will be used to create the array from the string with the ',' delimiter
-    const headers = str.slice(0, str.indexOf("\n")).split(delimiter);
+    const headers = str.slice(0, str.indexOf("\n")).replace(/(\r)/gm, "").split(delimiter);
 
+    
+    console.log(headers)
     // slice from \n index + 1 to the end of the tet
     // splitwill be used to create an array of each .csv value row
-    const rows = str.slice(str.indexOf("\n") + 1).split("\n");
+    const rows = str.slice(str.indexOf("\n") + 1).replace(/(\r)/gm, "").split("\n");
 
+    
+    console.log(rows)
     // map the rows and split values from each row into an array
-    // headers.reduce to create an object with its properties being extracted usin headers:values
-    // object passed as an elemt of the array
+    // headers.reduce to create an object with its properties being extracted using headers:values
+    // object passed as an element of the array
     const arr = rows.map(function (row) {
         const values = row.split(delimiter);
+
         const el = headers.reduce(function (object, header, index) {
             object[header] = values[index];
             return object;
@@ -65,4 +99,36 @@ function csvToArray(str, delimiter = ",") {
 
     // return the array
     return arr;
-}
+};
+
+function sendDataToServer(semesterId, dataArray) {
+    // Prepare data to send to the server
+    const requestData = {
+        semesterId: semesterId,
+        data: dataArray
+    };
+    console.log("requestData:",requestData)
+    console.log("stringified as JSON:",JSON.stringify(requestData),)
+    // Send data to the server using fetch API
+    fetch('/post', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestData),
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.text();
+    })
+    .then(data => {
+        console.log('Data sent to server:', data);
+        alert("Profile created successfully!");
+    })
+    .catch(error => {
+        console.error('There was a problem with the fetch operation:', error);
+        alert("Failed to create profile. Please try again later.");
+    })
+};
