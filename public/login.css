@@ -349,6 +349,11 @@ nav {
 
 /*################ create semester study profile ##############*/
 
+.invisible {
+  display: none;
+  visibility: hidden;
+}
+
 br::after {
   content: ' ';
 }

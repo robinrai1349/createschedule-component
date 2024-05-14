@@ -1,5 +1,6 @@
 const fs = require("fs");
-const pg = require("pg");
+const pg = require("pg")
+const { Pool } = pg
 const express = require("express");
 const bodyParser = require('body-parser')
 const app = express();
@@ -30,68 +31,106 @@ const config = {
  
    
    
- app.post('/post', jsonParser,(req,res)=>{
-    const client = new pg.Client(config);
+ app.post('/post', jsonParser, async (req,res)=>{
     const dataArray = req.body.data;
     const semesterId = req.body.semesterId;
+    const client = new pg.Client(config);
+    client.connect()
+    let uniqueCourseIDs = []
 
-    console.log(dataArray)
 
-
-    console.log("working so far")
-    
-    // Connect to the database
-    client.connect((err) => {
-      console.log("yoyo")
-      if (err) {
-          console.error('Database connection error:', err.stack);
-          return res.status(500).send('Database connection error');
+    client
+    .query("SELECT profileid FROM userprofileinfo WHERE userid=$1 AND profileid=$2", [userID, semesterId])
+    .then(result => {
+      if (result.rows.length > 0) {
+        throw new Error("Profile already exists!")
       }
-      client.query("SELECT profileid FROM userprofileinfo WHERE userid=$1 AND profileid=$2", [userID, semesterId], (err, result) => {
-        if (err) {
-            console.error('Error:', err.stack);
-        } else {
-          // Insert data into the database
+      })
+      .then(() => dataArray.forEach(row => {
+        const { courseID, courseName, deadlineName, deadlineDate, deadlineGrade } = row;
+        console.log(courseID)
 
-          // Check for existing profile
-          if (result.rows.length > 0) {
-            console.log("booo")
-          } else {
-            console.log("yooo its working yo")
-          }
+        if (!uniqueCourseIDs.includes(courseID)){
 
-          // dataArray.forEach(data => {
-          //   console.log("data:",data)
-          //   const { courseID, courseName, deadlineName, deadlineDate, deadlineGrade } = data;
-          //   client.query("INSERT INTO userprofileinfo (userID, profileID, courseID) VALUES ($1, $2, $3)", [userID, semesterId, courseID], (err, result) => {
-          //     if (err) {
-          //       console.error('Error!!!', err.stack);
-          //     } else {
-          //       console.log("Database: INSERT into userProfileInfo table successful!")
-          //     }
-          //   });
-          // });
+          uniqueCourseIDs.push(courseID)
+          console.log("unqiueCourseIDs list:", courseID)
+          client
+          .query("SELECT * FROM courses WHERE courseid=$1", [courseID])
+          .then(courseCountResult => {
+            console.log("the courseid in question:", courseID)
+            console.log(courseCountResult.rows.length)
+            if (courseCountResult.rows.length == 0){
+
+              client
+              .query("INSERT INTO courses (courseID, courseName) VALUES ($1, $2)", [courseID, courseName])
+              .then(console.log("Database: INSERT operation into 'courses' table processing..."))
+              .then(
+
+                client
+                .query("INSERT INTO userprofileinfo (userID, profileID, courseID) VALUES ($1, $2, $3)", [userID, semesterId, courseID])
+                .then(console.log("Database: INSERT operation into 'userProfileInfo' table processing..."))
+                .catch(err => {
+                  console.log(err.stack)
+                })
+
+              )
+              .catch(err => {
+                console.log(err.stack)
+              })
+
+            } else {
+
+              client
+              .query("INSERT INTO userprofileinfo (userID, profileID, courseID) VALUES ($1, $2, $3)", [userID, semesterId, courseID])
+              .then(console.log("Database: INSERT operation into 'userProfileInfo' table processing..."))
+              .catch(err => {
+                console.log(err.stack)
+              })
+
+            }
+          })
+          .catch(err => {
+            console.log(err.stack)
+          })
+
           
+
         }
-        // End the database connection
-        client.end();
-        
-      });
-      // Send response back to the client
-      res.status(200).send('Data inserted successfully');
+      }))
+      .catch(err => {
+        console.log(err.stack)
+      })
 
-  });
-  
+      // Send confirmation back to client
+      res.status(200).send('Data inserted successfully')
  });
-
+ 
 app.listen(3000);
 
+// previous outdated vvvvvv
 // TODO:
 /*
  - ADD ROUTES, this will prob solve the first problem below
     - look at lab example as a good reference
     - good link: https://stackoverflow.com/questions/53935163/how-can-i-send-one-alert-from-my-node-js-to-my-javascript-client
  - know how to send alert from Node.JS to Javascript client
- - do insert queries for database tables based on data inputted from user (assuming its valid)
+ - do insert queries for database tables based on data inputted from user (assuming its valid) 
  - get rid of 'console.log' test usages once all is well.
  */
+// above is outdated ^^^^^^^
+
+
+// current active: vvvvvvvv
+/*
+ AFTER:
+ - Not doing routes as it will take too long for everyone to translate into using the pug format
+ - still need to figure out server to client message relaying (alerts)
+ - queries added for courses and userprofileinfo table
+ 
+ TODO:
+ - know how to send alert from Node.JS to Javascript client
+ - queries for deadlineinfo
+ - know how to obtain current active user's userid instead of using temporary variable (userID)
+ - get rid of 'console.log' test usages once all is well.
+ - add comments for clarity i guess
+*/
