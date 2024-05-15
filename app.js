@@ -1,6 +1,5 @@
 const fs = require("fs");
 const pg = require("pg")
-const { Pool } = pg
 const express = require("express");
 const bodyParser = require('body-parser')
 const app = express();
@@ -81,22 +80,45 @@ const config = {
                     console.log("courseid:",courseID + ", courseName:",courseName)
                   await client.query("INSERT INTO courses (courseID, courseName) VALUES ($1, $2)", [courseID, courseName]);
               }
-
+              console.log("deadlineInfoMap:",deadlineInfoMap)
               for (const deadlineInfo of deadlineInfoMap[courseID]) {
                   const [deadlineName, deadlineDate, deadlineGrade] = deadlineInfo;
-                    console.log("yo")
+                    console.log([userID, courseID, deadlineName, deadlineDate, deadlineGrade])
                   // Check if the deadline already exists
-                  const deadlineExists = await client.query(
+                  console.log(!(deadlineGrade == null))
+                  if (!(deadlineGrade == null)){
+
+                    console.log("case where deadlineGrade is an INT")
+                    const deadlineExists = await client.query(
                       "SELECT * FROM deadlineinfo WHERE userID=$1 AND courseID=$2 AND deadlineName=$3 AND deadlineDate=$4 AND deadlineGrade=$5",
-                      [userID, courseID, deadlineName, deadlineDate, deadlineGrade]
-                  );
-                    console.log("yoyo")
-                  if (deadlineExists.rows.length === 0) {
-                      await client.query(
-                          "INSERT INTO deadlineinfo (userID, courseID, deadlineName, deadlineDate, deadlineGrade) VALUES ($1, $2, $3, $4, $5)",
-                          [userID, courseID, deadlineName, deadlineDate, deadlineGrade]
-                      );
+                      [userID, courseID, deadlineName, deadlineDate, deadlineGrade])
+                      console.log("exist row length:",deadlineExists.rows.length)
+                      console.log("row:",deadlineExists.rows)
+                    if (deadlineExists.rows.length === 0) {
+                      
+                        await client.query(
+                            "INSERT INTO deadlineinfo (userID, courseID, deadlineName, deadlineDate, deadlineGrade) VALUES ($1, $2, $3, $4, $5)",
+                            [userID, courseID, deadlineName, deadlineDate, deadlineGrade]
+                        );
+                    }
+                  } else {
+
+                    console.log("case where deadlineGrade is NULL")
+                    const deadlineExists = await client.query(
+                      "SELECT * FROM deadlineinfo WHERE userID=$1 AND courseID=$2 AND deadlineName=$3 AND deadlineDate=$4 AND deadlineGrade IS NULL",
+                      [userID, courseID, deadlineName, deadlineDate])
+
+                      console.log("exist row length:",deadlineExists.rows.length)
+                      console.log("row:",deadlineExists.rows)
+                    if (deadlineExists.rows.length === 0) {
+                      
+                        await client.query(
+                            "INSERT INTO deadlineinfo (userID, courseID, deadlineName, deadlineDate, deadlineGrade) VALUES ($1, $2, $3, $4, $5)",
+                            [userID, courseID, deadlineName, deadlineDate, deadlineGrade]
+                        );
+                    }
                   }
+                    
               }
               console.log("yoyoyo")
               // Check if the user profile info already exists
