@@ -34,7 +34,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
         // Simulate data file validation
         if (!dataFile.name.endsWith('.csv')) {
-            alert("Invalid data file format. Please upload a CSV file.");
+            alert("Invalid data file format. Please upload a valid CSV file.");
             return;
         }
 
@@ -45,7 +45,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 const data = csvToArray(text);
                 sendDataToServer(semesterId, data)
             } else {
-                console.log("Invalid")
+                alert("Invalid data file format. Please upload a valid CSV file.");
             }
             
         };
