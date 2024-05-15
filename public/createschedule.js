@@ -22,6 +22,8 @@ document.addEventListener("DOMContentLoaded", function() {
     });
 
     submitProfileBtn.addEventListener('click', function(e) {
+        e.preventDefault()
+
         const semesterId = document.getElementById('semesterId').value;
         const dataFile = document.getElementById('dataFile').files[0];
 
@@ -35,15 +37,12 @@ document.addEventListener("DOMContentLoaded", function() {
             alert("Invalid data file format. Please upload a CSV file.");
             return;
         }
-        e.preventDefault();
-        console.log("test1:")
+
         var reader = new FileReader();
         reader.onload = function(e) {
             const text = e.target.result;
             if (correctHeaders(text)) {
-                console.log("Valid")
                 const data = csvToArray(text);
-                console.log(data);
                 sendDataToServer(semesterId, data)
             } else {
                 console.log("Invalid")
@@ -76,14 +75,10 @@ function csvToArray(str, delimiter = ",") {
     // split will be used to create the array from the string with the ',' delimiter
     const headers = str.slice(0, str.indexOf("\n")).replace(/(\r)/gm, "").split(delimiter);
 
-    
-    console.log(headers)
     // slice from \n index + 1 to the end of the tet
     // splitwill be used to create an array of each .csv value row
     const rows = str.slice(str.indexOf("\n") + 1).replace(/(\r)/gm, "").split("\n");
 
-    
-    console.log(rows)
     // map the rows and split values from each row into an array
     // headers.reduce to create an object with its properties being extracted using headers:values
     // object passed as an element of the array
@@ -107,8 +102,6 @@ function sendDataToServer(semesterId, dataArray) {
         semesterId: semesterId,
         data: dataArray
     };
-    console.log("requestData:",requestData)
-    console.log("stringified as JSON:",JSON.stringify(requestData),)
     // Send data to the server using fetch API
     fetch('/post', {
         method: 'POST',
@@ -117,15 +110,9 @@ function sendDataToServer(semesterId, dataArray) {
         },
         body: JSON.stringify(requestData),
     })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error('Network response was not ok');
-        }
-        return response.text();
-    })
+    .then(response => response.json())
     .then(data => {
-        console.log('Data sent to server:', data);
-        alert("Profile created successfully!");
+        alert(data.message)
     })
     .catch(error => {
         console.error('There was a problem with the fetch operation:', error);
